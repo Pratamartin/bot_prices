@@ -2,6 +2,7 @@
 from typing import List, Dict, Any
 from prices.price_sources.mock_source import MockPriceSource
 from prices.price_sources.mock_source_b import MockPriceSourceB
+from prices.price_sources.http_store_source import HttpStoreSource
 # depois você adiciona MercadoLivreAPISource, AmazonSource etc.
 
 
@@ -10,6 +11,7 @@ class PriceAggregator:
         self.sources = [
             MockPriceSource(),
             MockPriceSourceB(),
+            HttpStoreSource(),
         ]
 
     def search_all(self, query: str) -> Dict[str, Any]:
