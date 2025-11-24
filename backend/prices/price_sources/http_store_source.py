@@ -44,8 +44,7 @@ class HttpStoreSource(BasePriceSource):
         data = resp.json()
 
         results: List[Dict[str, Any]] = []
-        for product in data.get("products", []):  # campo da DummyJSON
-            # adapta aqui pro formato padrão da sua aplicação
+        for product in data.get("products", []):  
             results.append(
                 {
                     "store": self.name,
@@ -53,7 +52,7 @@ class HttpStoreSource(BasePriceSource):
                     "id": str(product.get("id")),
                     "title": product.get("title") or q_clean,
                     "price": float(product.get("price", 0)),
-                    "currency": "USD",  # aqui depende da API real
+                    "currency": "BRL",
                     "url": product.get("url") or "",
                     "thumbnail": product.get("thumbnail"),
                 }

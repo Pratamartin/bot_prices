@@ -1,17 +1,14 @@
 # prices/services/price_aggregator.py
 from typing import List, Dict, Any
-from prices.price_sources.mock_source import MockPriceSource
-from prices.price_sources.mock_source_b import MockPriceSourceB
 from prices.price_sources.http_store_source import HttpStoreSource
-# depois você adiciona MercadoLivreAPISource, AmazonSource etc.
+from prices.price_sources.amazon_rapidapi import AmazonRapidAPISource
 
 
 class PriceAggregator:
     def __init__(self) -> None:
         self.sources = [
-            MockPriceSource(),
-            MockPriceSourceB(),
             HttpStoreSource(),
+            AmazonRapidAPISource(),
         ]
 
     def _tokenize(self, text: str) -> List[str]:
@@ -37,7 +34,6 @@ class PriceAggregator:
             if token in title_l:
                 hits += 1
 
-        # por enquanto: pelo menos metade dos tokens devem aparecer no título
         return hits >= max(1, len(query_tokens) // 2)
 
     def search_all(self, query: str) -> Dict[str, Any]:
@@ -49,7 +45,6 @@ class PriceAggregator:
 
         query_tokens = self._tokenize(query)
 
-        # marca relevância
         for item in all_results:
             title = item.get("title", "")
             item["relevant"] = self._is_relevant(query_tokens, title)
@@ -64,13 +59,12 @@ class PriceAggregator:
             }
 
         if not relevant_results:
-            # se nada for considerado relevante, a gente volta a usar tudo
             relevant_results = all_results
 
         best = min(relevant_results, key=lambda x: x["price"])
 
         return {
             "query": query,
-            "results": all_results,      # com campo "relevant" em cada item
+            "results": all_results,
             "best": best,
         }
