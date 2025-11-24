@@ -19,6 +19,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("api/", include("prices.urls")),  # <--- nosso endpoint
-    path("ml/", include("integrations.urls")),
+    path("api/", include("prices.urls")), 
 ]
