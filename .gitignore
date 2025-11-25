@@ -117,6 +117,7 @@ venv.bak/
 .env.dev
 .env.prod
 .env.local
+commands.md
 
 # mkdocs documentation
 /site
