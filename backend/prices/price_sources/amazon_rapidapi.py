@@ -79,8 +79,6 @@ class AmazonRapidAPISource(BasePriceSource):
 
         products = data.get("data", {}).get("products") or []
 
-        print(products)
-
         logger.info(
             "[AmazonRapidAPISource] Produtos retornados: %s",
             len(products),
@@ -111,8 +109,6 @@ class AmazonRapidAPISource(BasePriceSource):
                     "thumbnail": thumb,
                 }
             )
-
-        print(results)
 
         return results
     
