@@ -9,6 +9,7 @@ from prices.domain.relevance_terms import (
     PS5_ACCESSORY_PHRASES,
     PS5_CONSOLE_HINTS,
 )
+from prices.domain.catalog import classify_query, QueryProfile
 
 logger = logging.getLogger(__name__)
 
@@ -94,34 +95,36 @@ class PriceAggregator:
         return t
 
     
-    def _relevance_score(self, query_tokens: list[str], title: str) -> float:
+    def _relevance_score(self, profile: QueryProfile, title: str) -> float:
+
         if not title:
             return 0.0
 
-        title_l = self._normalize_title(title)
-        profile = self._get_query_profile(query_tokens)
 
-        if not query_tokens:
+        title_l = self._normalize_title(title)
+        tokens = profile.tokens
+
+        if not tokens:
             base = 1.0
         else:
-            hits = sum(1 for token in query_tokens if token in title_l)
-            base = hits / len(query_tokens)
+            hits = sum(1 for token in tokens if token in title_l)
+            base = hits / len(tokens)
 
         if any(bad in title_l for bad in ACCESSORY_BAD_WORDS):
             base *= 0.2
 
-        if profile == "ps5_console":
+        if profile.category == "console" and profile.family_slug == "ps5":
 
             if self._looks_like_ps5_game(title_l):
-                base *= 0.05
+                base *= 0.05  # jogo de PS5 quase some
 
             if self._looks_like_ps5_accessory(title_l):
-                base *= 0.01
+                base *= 0.01  # acessório tipo unidade de disco some total
 
             if any(hint in title_l for hint in PS5_CONSOLE_HINTS):
-                base += 0.2
+                base += 0.2  # bônus pra cara de console (slim, digital, 1tb, etc.)
 
-        first_token = query_tokens[0] if query_tokens else ""
+        first_token = tokens[0] if tokens else ""
         if first_token and title_l.startswith(first_token):
             base += 0.1
 
@@ -129,19 +132,18 @@ class PriceAggregator:
 
 
     def search_all(self, query: str) -> Dict[str, Any]:
-        all_results: List[Dict[str, Any]] = []
+        profile: QueryProfile = classify_query(query)
 
+        all_results: List[Dict[str, Any]] = []
         for source in self.sources:
             results = source.search(query)
             logger.info("[%s] retornou %d resultados", source.name, len(results))
             all_results.extend(results)
 
-        query_tokens = self._tokenize(query)
-        profile = self._get_query_profile(query_tokens)
 
         for item in all_results:
             title = item.get("title", "")
-            score = self._relevance_score(query_tokens, title)
+            score = self._relevance_score(profile, title)
             item["relevance_score"] = score
 
         relevant_results = [r for r in all_results if r.get("relevance_score", 0) >= 0.4]
