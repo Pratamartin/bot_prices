@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 import logging
 
 from prices.price_sources.amazon_rapidapi import AmazonRapidAPISource
+from prices.price_sources.mercado_livre_rapidapi import MercadoLivreRapidAPISource
 
 from prices.domain.relevance_terms import (
     ACCESSORY_BAD_WORDS,
@@ -17,6 +18,7 @@ class PriceAggregator:
     def __init__(self) -> None:
         self.sources = [
             AmazonRapidAPISource(),
+            MercadoLivreRapidAPISource(),
         ]
 
     def _tokenize(self, text: str) -> List[str]:
