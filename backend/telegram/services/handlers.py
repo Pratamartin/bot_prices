@@ -58,7 +58,6 @@ def handle_update(update: Dict[str, Any]) -> None:
             "Não entendi o produto 😅\n"
             "Tenta algo como:\n"
             "`Quais são as ofertas do iPhone 13 128GB?`",
-            parse_mode="Markdown",
         )
         return
 
@@ -68,7 +67,7 @@ def handle_update(update: Dict[str, Any]) -> None:
     result = aggregator.search_all(query)
 
     message_text = format_price_response(result)
-    safe_send_message(chat_id, message_text, parse_mode="Markdown")
+    safe_send_message(chat_id, message_text)
 
     send_followup_question(chat_id)
 
@@ -97,7 +96,6 @@ def send_followup_question(chat_id: int) -> None:
         chat_id,
         text,
         reply_markup=reply_markup,
-        parse_mode="Markdown",
     )
 
 
@@ -108,15 +106,17 @@ def send_start_message_with_categories(chat_id: int) -> None:
             [
                 {"text": "🎮 Consoles", "callback_data": "cat:console"},
                 {"text": "📱 Celulares", "callback_data": "cat:phone"},
+                {"text": "🛍️ Outra", "callback_data": "cat:other"},
             ],
         ]
     }
 
     text = (
-        "Oi! Eu sou o PriceBot 💸\n\n"
+        "Olá! Eu sou o PriceBot 💸\n\n"
         "Primeiro, escolha uma categoria:\n"
-        "• *Consoles* (PS5, Xbox, etc.)\n"
-        "• *Celulares* (iPhone, Galaxy, etc.)\n\n"
+        "• Consoles (PS5, Xbox, etc.)\n"
+        "• Celulares (iPhone, Galaxy, etc.)\n\n"
+        "• Outra categoria qualquer (roupas, eletrodomésticos, etc.)\n\n"
         "Depois eu te peço o modelo e mostro as melhores ofertas 😉"
     )
 
@@ -124,7 +124,6 @@ def send_start_message_with_categories(chat_id: int) -> None:
         chat_id,
         text,
         reply_markup=reply_markup,
-        parse_mode="Markdown",
     )
 
 
@@ -163,13 +162,21 @@ def handle_callback_query(callback: Dict[str, Any]) -> None:
                 "• `galaxy s23`\n"
                 "• `redmi note 13`"
             )
+        elif category == "other":
+            text = (
+                "Ok, categoria outra selecionada 🛍️\n\n"
+                "Me manda o produto que você quer buscar, por exemplo:\n"
+                "• tênis nike air max\n"
+                "• geladeira frost free\n"
+                "• smart tv 50 polegadas"
+            )
         else:
             text = (
                 "Categoria selecionada 👍\n"
                 "Agora me manda o produto que você quer buscar:"
             )
 
-        safe_send_message(chat_id, text, parse_mode="Markdown")
+        safe_send_message(chat_id, text)
         return
 
     if data == "action:new_search":

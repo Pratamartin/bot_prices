@@ -56,7 +56,6 @@ class MercadoLivreRapidAPISource(BasePriceSource):
 
         try:
             resp = requests.get(self.SEARCH_URL, headers=headers, params=params, timeout=15)
-            print(resp)  # para debug, pode remover depois
         except requests.RequestException:
             return []
 
@@ -67,8 +66,6 @@ class MercadoLivreRapidAPISource(BasePriceSource):
         data = resp.json()
 
         products = data.get("data") or []
-
-        print(products)  
 
         results: List[Dict[str, Any]] = []
 
