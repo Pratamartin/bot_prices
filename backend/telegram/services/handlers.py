@@ -70,6 +70,37 @@ def handle_update(update: Dict[str, Any]) -> None:
     message_text = format_price_response(result)
     safe_send_message(chat_id, message_text, parse_mode="Markdown")
 
+    send_followup_question(chat_id)
+
+
+def send_followup_question(chat_id: int) -> None:
+    """
+    Envia uma mensagem com botões perguntando se o usuário quer mais alguma coisa.
+    """
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": "🔎 Nova busca", "callback_data": "action:new_search"},
+                {"text": "❌ Encerrar", "callback_data": "action:close"},
+            ]
+        ]
+    }
+
+    text = (
+        "Posso te ajudar com mais alguma coisa? 🙂\n\n"
+        "Você pode:\n"
+        "• Fazer uma *nova busca* clicando em \"Nova busca\"\n"
+        "• Ou simplesmente digitar o nome de outro produto"
+    )
+
+    safe_send_message(
+        chat_id,
+        text,
+        reply_markup=reply_markup,
+        parse_mode="Markdown",
+    )
+
+
 
 def send_start_message_with_categories(chat_id: int) -> None:
     reply_markup = {
@@ -78,7 +109,6 @@ def send_start_message_with_categories(chat_id: int) -> None:
                 {"text": "🎮 Consoles", "callback_data": "cat:console"},
                 {"text": "📱 Celulares", "callback_data": "cat:phone"},
             ],
-            # [{"text": "💻 Notebooks", "callback_data": "cat:notebook"}],
         ]
     }
 
@@ -141,4 +171,19 @@ def handle_callback_query(callback: Dict[str, Any]) -> None:
 
         safe_send_message(chat_id, text, parse_mode="Markdown")
         return
+
+    if data == "action:new_search":
+        safe_send_message(
+            chat_id,
+            "Beleza! Me manda o nome do próximo produto que você quer pesquisar 🕵️‍♂️",
+        )
+        return
+
+    if data == "action:close":
+        safe_send_message(
+            chat_id,
+            "Fechado! Se precisar, é só mandar outra mensagem ou usar /start 😄",
+        )
+        return
+
 
