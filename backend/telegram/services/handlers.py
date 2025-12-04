@@ -96,6 +96,7 @@ def send_followup_question(chat_id: int) -> None:
         chat_id,
         text,
         reply_markup=reply_markup,
+        
     )
 
 

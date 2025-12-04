@@ -14,7 +14,7 @@ def format_price_response(result: Dict[str, Any], max_offers: int = 3) -> str:
     offers: List[Dict[str, Any]] = result.get("results") or []
 
     if not offers and not best:
-        return f"❌ Não encontrei ofertas para **{query or 'o produto informado'}**."
+        return f"❌ Não encontrei ofertas para {query or 'o produto informado'}."
 
     # se por algum motivo best não estiver em offers, adiciona
     if best and best not in offers:
@@ -35,7 +35,7 @@ def format_price_response(result: Dict[str, Any], max_offers: int = 3) -> str:
 
     top_offers = sorted_offers[:max_offers]
 
-    header_lines: List[str] = [f"🔍 Ofertas para **{query}**"]
+    header_lines: List[str] = [f"🔍 Ofertas para {query}"]
 
     # --------- Bloco da melhor oferta ---------
     if best:
@@ -45,8 +45,8 @@ def format_price_response(result: Dict[str, Any], max_offers: int = 3) -> str:
         header_lines.append("")
         header_lines.append("💰 Melhor oferta encontrada:")
         header_lines.append(
-            f"➡️ **{best_store_name}** — {best_price}\n"
-            f"`{best.get('title', 'Produto')}`"
+            f"➡️{best_store_name} — {best_price}\n"
+            f"{best.get('title', 'Produto')}"
         )
         if best.get("url"):
             header_lines.append(best["url"])
@@ -72,9 +72,9 @@ def format_price_response(result: Dict[str, Any], max_offers: int = 3) -> str:
             # não reaproveita o do best
             offer_store_name = offer.get("store", "Loja").split("(")[0].strip()
 
-            line = f"• **{offer_store_name}** — {price_str}\n  `{title}`"
+            line = f"•{offer_store_name} — {price_str}\n {title}"
             if url:
-                line += f"\n  {url}"
+                line += f"\nClique no link: {url}"
             body_lines.append(line)
 
     body_lines.append("")
