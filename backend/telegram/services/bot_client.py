@@ -6,6 +6,8 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_API_BASE = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+GLOBAL_CHAT_ID = os.environ.get("PRICEBOT_GLOBAL_CHAT_ID")
+
 
 
 def safe_send_message(chat_id: int, text: str, reply_markup: dict | None = None, parse_mode: str | None = None) -> None:

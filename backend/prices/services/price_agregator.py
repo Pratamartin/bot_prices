@@ -3,6 +3,7 @@ import logging
 
 from prices.price_sources.amazon_rapidapi import AmazonRapidAPISource
 from prices.price_sources.mercado_livre_rapidapi import MercadoLivreRapidAPISource
+from prices.price_sources.makeup_mock import MakeupMockSource
 
 from prices.domain.relevance_terms import (
     ACCESSORY_BAD_WORDS,
@@ -18,8 +19,7 @@ logger = logging.getLogger(__name__)
 class PriceAggregator:
     def __init__(self) -> None:
         self.sources = [
-            AmazonRapidAPISource(),
-            MercadoLivreRapidAPISource(),
+            MakeupMockSource(),
         ]
 
     def _tokenize(self, text: str) -> List[str]:
