@@ -3,11 +3,13 @@ import re
 import os
 from typing import Any, Dict
 
+from prices.domain.makeup_terms import is_makeup_query
 from prices.services.price_agregator import PriceAggregator
 from .bot_client import safe_send_message, safe_answer_callback_query 
 from .formatters import format_price_response
 
 from telegram.models import SearchLog
+
 GLOBAL_CHAT_ID = os.environ.get("PRICEBOT_GLOBAL_CHAT_ID")
 # Hardcoded bot id (aceita ser hardcoded conforme pedido)
 BOT_ID = int(os.environ.get("TELEGRAM_BOT_ID", "8176839555"))
@@ -76,6 +78,18 @@ def handle_update(update: Dict[str, Any]) -> None:
         return
 
     query = extract_query_from_text(text)
+    
+    if not is_makeup_query(query):
+        safe_send_message(
+            chat_id,
+            "Este bot funciona somente com produtos de maquiagem 💄\n"
+            "Tente algo como:\n"
+            "• gloss liphoney\n"
+            "• base ruby rose\n"
+            "• paleta bruna tavares"
+    )
+        return
+    
     if not query:
         safe_send_message(
             chat_id,
@@ -84,6 +98,7 @@ def handle_update(update: Dict[str, Any]) -> None:
             "Quais são as ofertas de base matte para pele oleosa?",
         )
         return
+    
 
     logger.info("Consulta do bot: %s (query: %s)", text, query)
 
