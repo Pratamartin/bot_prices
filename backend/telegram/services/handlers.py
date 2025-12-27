@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from prices.domain.makeup_terms import is_makeup_query
 from prices.services.price_agregator import PriceAggregator
+from prices.services.shortlinks import create_offer_shortlink
 from .bot_client import safe_send_message, safe_answer_callback_query 
 from .formatters import format_price_response_html
 
@@ -19,6 +20,9 @@ BOT_ID = int(os.environ.get("TELEGRAM_BOT_ID", "8176839555"))
 
 logger = logging.getLogger(__name__)
 
+# Dicionário para armazenar ofertas pendentes de compartilhamento
+pending_shares = {}
+
 
 def extract_query_from_text(text: str) -> str:
     t = (text or "").strip()
@@ -32,6 +36,64 @@ def extract_query_from_text(text: str) -> str:
         return m.group(2).strip(" ?!.")
 
     return t
+
+
+def broadcast_best_offer(query: str, best: Dict[str, Any], global_chat_id: int) -> None:
+    """Envia a melhor oferta para o grupo/canal global, de forma anônima."""
+    store_name = (best.get("store") or "Loja").split("(")[0].strip()
+    price = best.get("price")
+    title = best.get("title") or "Produto"
+
+    # formata preço de forma segura
+    if isinstance(price, (int, float)):
+        price_str = f"R$ {price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    else:
+        price_str = "preço indisponível"
+
+    # cria link curto
+    try:
+        short_url = create_offer_shortlink(best, telegram_user_id=None, chat_id=global_chat_id)
+    except Exception:
+        logger.exception("Erro ao criar shortlink para broadcast")
+        short_url = best.get("url") or ""
+
+    group_msg = f"""🛍️ <b>Nova busca no bot de make:</b>
+"{query}"
+
+💰 <b>Melhor oferta encontrada:</b>
+{store_name} — {price_str}
+{title}
+<a href="{short_url}">Ver oferta</a>"""
+
+    try:
+        safe_send_message(global_chat_id, group_msg, parse_mode="HTML")
+    except Exception:
+        logger.exception("Erro ao enviar mensagem para grupo global")
+
+
+def send_share_question(chat_id: int) -> None:
+    """
+    Envia uma mensagem perguntando se o usuário quer compartilhar a oferta no grupo global.
+    """
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": "✅ Sim, compartilhar", "callback_data": "share:yes"},
+                {"text": "❌ Não, obrigado", "callback_data": "share:no"},
+            ]
+        ]
+    }
+
+    text = (
+        "Gostaria de compartilhar essa oferta incrível na nossa comunidade? 🛍️\n\n"
+        "Isso ajuda outros usuários a descobrirem boas ofertas!"
+    )
+
+    safe_send_message(
+        chat_id,
+        text,
+        reply_markup=reply_markup,
+    )
 
 
 def handle_update(update: Dict[str, Any]) -> None:
@@ -118,11 +180,14 @@ def handle_update(update: Dict[str, Any]) -> None:
     
     safe_send_message(chat_id, message_text, parse_mode="HTML")
 
+    # Se há uma melhor oferta, pergunta se quer compartilhar
+    best = result.get("best")
+    if best and GLOBAL_CHAT_ID:
+        pending_shares[chat_id] = {"query": query, "best": best}
+        send_share_question(chat_id)
+
     # pergunta se quer nova busca / encerrar
     send_followup_question(chat_id)
-
-    # ---- LOG NO BANCO ----
-    best = result.get("best")
 
     try:
         SearchLog.objects.create(
@@ -138,79 +203,7 @@ def handle_update(update: Dict[str, Any]) -> None:
     except Exception:
         logger.exception("Erro ao salvar SearchLog")
 
-    # ---- BROADCAST ANÔNIMO PRO GRUPO GLOBAL ----
-    if GLOBAL_CHAT_ID and best:
-        try:
-            # tentativa de converter o ID
-            global_chat_id = int(GLOBAL_CHAT_ID)
-        except (TypeError, ValueError):
-            logger.warning("PRICEBOT_GLOBAL_CHAT_ID inválido: %s", GLOBAL_CHAT_ID)
-            return
 
-        store_name = (best.get("store") or "Loja").split("(")[0].strip()
-        price = best.get("price")
-        title = best.get("title") or "Produto"
-        url = best.get("url") or ""
-
-        # formata preço de forma segura
-        if isinstance(price, (int, float)):
-            price_str = f"R$ {price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        else:
-            price_str = "preço indisponível"
-
-        group_msg_lines = [
-            "🛍️ Nova busca no bot de make:",
-            f"“{query}”",
-            "",
-            "💰 Melhor oferta encontrada:",
-            f"{store_name} — {price_str}",
-            title,
-        ]
-        if url:
-            group_msg_lines.append(url)
-
-        group_msg = "\n".join(group_msg_lines)
-
-        try:
-            safe_send_message(global_chat_id, group_msg)
-        except Exception:
-            logger.exception("Erro ao enviar mensagem para grupo global")
-
-
-
-def _broadcast_best_offer_to_global(query: str, best: Dict[str, Any]) -> None:
-    """Envia a melhor oferta para o grupo/canal global, de forma anônima."""
-    if not GLOBAL_CHAT_ID:
-        return
-
-    try:
-        chat_id = int(GLOBAL_CHAT_ID)
-    except ValueError:
-        logger.warning("PRICEBOT_GLOBAL_CHAT_ID inválido: %s", GLOBAL_CHAT_ID)
-        return
-
-    store_name = (best.get("store") or "Loja").split("(")[0].strip()
-    price = best.get("price")
-    currency = best.get("currency", "BRL")
-    title = best.get("title") or "Produto"
-    url = best.get("url") or ""
-
-    price_str = format_price_response_html(price, currency)
-
-    lines = [
-        "💄 Nova oferta encontrada pelo bot de make:",
-        "",
-        f"🔎 Busca: {query}",
-        "",
-        "💰 Melhor oferta:",
-        f"{store_name} — {price_str}",
-        title,
-    ]
-    if url:
-        lines.append(url)
-
-    text = "\n".join(lines)
-    safe_send_message(chat_id, text)  # sem parse_mode pra evitar erro de Markdown
 
 def send_followup_question(chat_id: int) -> None:
     """
@@ -355,6 +348,25 @@ def handle_callback_query(callback: Dict[str, Any]) -> None:
             chat_id,
             "Fechado! Se precisar, é só mandar outra mensagem ou usar /start 😄",
         )
+        return
+
+    # -------- compartilhamento de oferta --------
+    if data == "share:yes":
+        share_data = pending_shares.pop(chat_id, None)
+        if share_data:
+            query = share_data["query"]
+            best = share_data["best"]
+            try:
+                global_chat_id = int(GLOBAL_CHAT_ID)
+                broadcast_best_offer(query, best, global_chat_id)
+                safe_send_message(chat_id, "Oferta compartilhada na comunidade! Obrigado! 🙌")
+            except (TypeError, ValueError):
+                logger.warning("PRICEBOT_GLOBAL_CHAT_ID inválido: %s", GLOBAL_CHAT_ID)
+        return
+
+    if data == "share:no":
+        pending_shares.pop(chat_id, None)
+        safe_send_message(chat_id, "Ok, não compartilhamos. Se mudar de ideia, é só fazer outra busca! 😊")
         return
 
 
