@@ -369,18 +369,3 @@ def handle_callback_query(callback: Dict[str, Any]) -> None:
         safe_send_message(chat_id, "Ok, não compartilhamos. Se mudar de ideia, é só fazer outra busca! 😊")
         return
 
-
-
-def _short_url_for_offer(offer: dict, telegram_user_id: int, chat_id: int) -> str:
-    obj = OfferLink.objects.create(
-        source=offer.get("source",""),
-        store=offer.get("store",""),
-        title=offer.get("title",""),
-        price=offer.get("price"),
-        currency=offer.get("currency","BRL"),
-        target_url=offer.get("url") or "",
-    )
-
-    base = settings.PUBLIC_BASE_URL.rstrip("/")  # ex: https://seu-dominio.com
-    # opcional: passar u/c para rastrear (não é obrigatório)
-    return f"{base}/r/{obj.id}/?u={telegram_user_id}&c={chat_id}"
