@@ -6,9 +6,12 @@ from typing import Any, Dict
 from prices.domain.makeup_terms import is_makeup_query
 from prices.services.price_agregator import PriceAggregator
 from .bot_client import safe_send_message, safe_answer_callback_query 
-from .formatters import format_price_response
+from .formatters import format_price_response_html
+
 
 from telegram.models import SearchLog
+from django.conf import settings
+from prices.models import OfferLink
 
 GLOBAL_CHAT_ID = os.environ.get("PRICEBOT_GLOBAL_CHAT_ID")
 # Hardcoded bot id (aceita ser hardcoded conforme pedido)
@@ -105,8 +108,15 @@ def handle_update(update: Dict[str, Any]) -> None:
     aggregator = PriceAggregator()
     result = aggregator.search_all(query)
 
-    message_text = format_price_response(result)
-    safe_send_message(chat_id, message_text)
+    telegram_user_id = message.get("from", {}).get("id")
+    message_text = format_price_response_html(
+    result,
+    max_other_offers=2,
+    telegram_user_id=telegram_user_id,
+    chat_id=chat_id,
+    )
+    
+    safe_send_message(chat_id, message_text, parse_mode="HTML")
 
     # pergunta se quer nova busca / encerrar
     send_followup_question(chat_id)
@@ -185,7 +195,7 @@ def _broadcast_best_offer_to_global(query: str, best: Dict[str, Any]) -> None:
     title = best.get("title") or "Produto"
     url = best.get("url") or ""
 
-    price_str = format_price_response(price, currency)
+    price_str = format_price_response_html(price, currency)
 
     lines = [
         "💄 Nova oferta encontrada pelo bot de make:",
@@ -348,3 +358,17 @@ def handle_callback_query(callback: Dict[str, Any]) -> None:
         return
 
 
+
+def _short_url_for_offer(offer: dict, telegram_user_id: int, chat_id: int) -> str:
+    obj = OfferLink.objects.create(
+        source=offer.get("source",""),
+        store=offer.get("store",""),
+        title=offer.get("title",""),
+        price=offer.get("price"),
+        currency=offer.get("currency","BRL"),
+        target_url=offer.get("url") or "",
+    )
+
+    base = settings.PUBLIC_BASE_URL.rstrip("/")  # ex: https://seu-dominio.com
+    # opcional: passar u/c para rastrear (não é obrigatório)
+    return f"{base}/r/{obj.id}/?u={telegram_user_id}&c={chat_id}"
